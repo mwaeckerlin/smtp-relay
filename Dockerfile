@@ -1,5 +1,7 @@
-FROM mwaeckerlin/mailforward
+FROM mwaeckerlin/base
 MAINTAINER mwaeckerlin
 
-RUN apt-get update
-RUN apt-get install -y postfix postfix-ldap postfix-pcre
+ENV CONTAINERNAME "postfix"
+RUN apk update \
+ && apk add postfix rsyslog \
+ && postconf -e 'mynetworks = 127.0.0.1/32 192.168.0.0/16 172.16.0.0/12 10.0.0.0/8'

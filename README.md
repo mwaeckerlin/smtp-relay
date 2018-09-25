@@ -1,2 +1,5 @@
-# postfix
-Docker Image for Postfix SMTP Server
+Simple Postfix SMTP Relay
+=========================
+
+Docker image for unprotected open postfix SMTP relay server.
+
