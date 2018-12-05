@@ -5,7 +5,7 @@ EXPOSE 25
 
 ENV MAILHOST      "localhost"
 
-ENV CONTAINERNAME "postfix"
+ENV CONTAINERNAME "smtp-relay"
 RUN apk update \
  && apk add postfix rsyslog \
  && postconf -e 'mynetworks = 127.0.0.1/32 192.168.0.0/16 172.16.0.0/12 10.0.0.0/8' \
