@@ -7,7 +7,7 @@ RUN postconf -e 'smtp_tls_security_level = may'
 RUN postconf -e smtpd_banner="\$myhostname ESMTP"
 RUN postconf -e mail_spool_directory="/mail"
 RUN postconf -e mailbox_command=""
-RUN postconf -e compatibility_level=2
+RUN postconf -e compatibility_level=3.6
 RUN postconf -e maillog_file=/dev/stdout
 RUN postconf -e inet_interfaces=all
 
