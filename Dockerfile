@@ -13,8 +13,10 @@ RUN postconf -e inet_interfaces=all
 
 FROM mwaeckerlin/scratch
 ENV CONTAINERNAME "smtp-relay"
+ENV OPENDKIM      ""
 COPY --from=build / /
+ADD start.sh /usr/local/bin/start.sh
 EXPOSE 25
 VOLUME /mail
 USER root
-CMD /usr/sbin/postfix start-fg
+CMD ["/usr/local/bin/start.sh"]
