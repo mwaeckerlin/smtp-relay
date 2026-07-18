@@ -9,6 +9,54 @@ This very basic image is intended to be used together with any other docker imag
 
 If you need `TLS`, just use [mwaeckerlin/smtp-relay-tls](https://hub.docker.com/r/mwaeckerlin/smtp-relay-tls).
 
+## Headless image
+
+The image is headless: a small compiled `init` binary configures
+postfix from the environment and execs the postfix `master` daemon in
+container mode — there is no shell, no busybox and no package manager
+in the shipped image. `init --healthcheck` TCP-probes the SMTP listener
+on 127.0.0.1:25 and can be wired as a Docker healthcheck:
+
+```yaml
+healthcheck:
+  test: ["CMD", "/usr/bin/init", "--healthcheck"]
+```
+
+Trade-off: the container starts as root — the postfix master needs it
+to bind port 25 and manage the mail queue — and every postfix service
+then drops privileges to the unprivileged `postfix` user per master.cf.
+
+## Mail queue persistence
+
+Postfix answers `250 Ok` as soon as a mail is safely written (fsync)
+into its queue — from that moment the server owns delivery and the
+sender never retries. A deferred mail (target greylisting, target
+briefly down) can sit in the queue for hours or days. **Map
+`/var/spool/postfix` to a named volume** (see `docker-compose.yml`),
+otherwise every container recreate or image update silently destroys
+accepted-but-undelivered mail.
+
+## DNS blocklists
+
+The smtpd restrictions include DNSBL/RHSBL lookups (manitu, spamhaus).
+Set **`DISABLE_DNSBL`** to any non-empty value to strip them — for
+test or offline stacks whose resolver cannot answer the blocklist
+zones (each lookup would stall the SMTP dialogue until the resolver
+timeout). Trade-off: without the blocklists, known-bad senders are no
+longer rejected at connect time; leave it unset in production.
+
+## Delivery-affecting limits
+
+Both limits are deliberately high by default and configurable — a
+legitimate mail must never bounce because of an artificial default:
+
+- **`MESSAGE_SIZE_LIMIT`** (bytes, default `107374182400` = 100 GiB,
+  `0` = unlimited): maximum accepted message size;
+  `mailbox_size_limit` is pinned to the same value.
+- **`SMTP_HARD_ERROR_LIMIT`** (default `20`, the postfix standard):
+  hard SMTP protocol errors per session before the connection is
+  dropped.
+
 See also:
 
 - [mwaeckerlin/smtp-relay](https://hub.docker.com/r/mwaeckerlin/smtp-relay) for a simple open mail relay

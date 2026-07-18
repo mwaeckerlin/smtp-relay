@@ -4,3 +4,14 @@ services:
     build: .
     ports:
       - "25:25"
+    volumes:
+      # The queue MUST persist: postfix answers 250 once a mail is
+      # fsync'ed into the queue — the sender never retries after that.
+      # Without this volume a deferred mail silently vanishes on every
+      # container recreate / image update.
+      - type: volume
+        source: spool
+        target: /var/spool/postfix
+
+volumes:
+  spool:
