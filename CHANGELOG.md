@@ -1,5 +1,16 @@
 # Changelog
 
+- 2026-07-18 **security hardening**
+    - Every configuration value from the environment is now validated
+      before use; a malformed value (for example an embedded newline
+      that could smuggle extra configuration directives) refuses to
+      start with a clear `invalid <VAR>` error instead of silently
+      producing a broken or unsafe configuration. Covered by the new
+      config-validation test suite (`npm test`).
+    - The standalone compose example now binds the relay to loopback
+      only and carries a healthcheck — an open relay must never be
+      published beyond the local machine (see the README warning).
+
 - 2026-07-18 **headless image**
     - The image no longer contains a shell, busybox or a package
       manager: a compiled `init` binary configures postfix from the

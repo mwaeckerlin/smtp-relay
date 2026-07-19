@@ -57,6 +57,14 @@ legitimate mail must never bounce because of an artificial default:
   hard SMTP protocol errors per session before the connection is
   dropped.
 
+## Input validation
+
+Every environment value is whitelist-validated at start-up before it
+is fed to `postconf` — a malformed value (embedded newline, stray
+metacharacters, out-of-range number) aborts the start with a clear
+`invalid <VAR>` error instead of rendering a broken or unsafe
+configuration. Pinned by `tests/config-validation.sh` (`npm test`).
+
 See also:
 
 - [mwaeckerlin/smtp-relay](https://hub.docker.com/r/mwaeckerlin/smtp-relay) for a simple open mail relay

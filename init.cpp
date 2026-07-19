@@ -20,12 +20,17 @@ Behaviour (port of the former start.sh, contract unchanged):
   3. postsuper queue sanity, then exec master in init mode (-i) as
      PID 1 — the same daemon `postfix start-fg` ends up running, minus
      the shell wrapper. maillog_file=/dev/stdout keeps logs on stdout.
+  4. Every env value is whitelist-validated before it is fed to
+     postconf — a malformed value (a newline above all: config
+     injection) aborts the start with a clear `invalid <VAR>` error.
+     Pinned by tests/config-validation.sh.
 
 Supports --healthcheck: TCP-probes the SMTP listener at 127.0.0.1:25.
 
 */
 
 #include <arpa/inet.h>
+#include <cctype>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
@@ -50,6 +55,38 @@ std::string
 env_or(const char *name, const std::string &fallback = {}) {
   const char *v = std::getenv(name);
   return (v && *v) ? std::string(v) : fallback;
+}
+
+// Every env value is fed to `postconf -e`, so an unvalidated value — a
+// newline above all — would inject arbitrary extra directives (config
+// injection). Operator input is input: whitelist-validate each value
+// class and refuse to start on anything malformed (pinned by
+// tests/config-validation.sh).
+[[noreturn]] void
+die_invalid(const char *var, const std::string &value) {
+  std::cerr << "**** ERROR: invalid " << var << " \"" << value
+            << "\" — refusing to start" << std::endl;
+  std::exit(1);
+}
+
+// Empty stays allowed: every knob is optional — validation constrains
+// only what IS set.
+void
+check_chars(const char *var, const std::string &v, const std::string &extra) {
+  for (char c : v)
+    if (!std::isalnum(static_cast<unsigned char>(c)) &&
+        extra.find(c) == std::string::npos)
+      die_invalid(var, v);
+}
+
+long
+check_num(const char *var, const std::string &v, long min, long max) {
+  if (v.empty() || v.size() > 15 ||
+      v.find_first_not_of("0123456789") != std::string::npos)
+    die_invalid(var, v);
+  long n = std::atol(v.c_str());
+  if (n < min || n > max) die_invalid(var, v);
+  return n;
 }
 
 // Capture ONLY stdout — stderr stays on the container log. postconf
@@ -205,10 +242,20 @@ tcp_probe(const std::string &host, int port) {
 } // namespace
 
 int main(int argc, char *argv[]) try {
+  const std::string opendkim = env_or("OPENDKIM");
+
+  // Validate every env value before it is rendered anywhere — also on
+  // the --healthcheck path, so a misconfigured container reports
+  // unhealthy instead of probing a listener that never came up.
+  check_chars("OPENDKIM", opendkim, ".-_:");
+  check_num("MESSAGE_SIZE_LIMIT",
+            env_or("MESSAGE_SIZE_LIMIT", "107374182400"), 0, 999999999999999L);
+  check_num("SMTP_HARD_ERROR_LIMIT",
+            env_or("SMTP_HARD_ERROR_LIMIT", "20"), 1, 1000000);
+
   if (argc > 1 && std::string(argv[1]) == "--healthcheck")
     return tcp_probe("127.0.0.1", 25);
 
-  const std::string opendkim = env_or("OPENDKIM");
   if (!opendkim.empty())
     configure_milter(with_default_port(opendkim, "10026"));
 

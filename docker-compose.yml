@@ -3,7 +3,17 @@ services:
     image: mwaeckerlin/smtp-relay
     build: .
     ports:
-      - "25:25"
+      # loopback only: this is an OPEN RELAY for internal use (see the
+      # README warning) — never publish it beyond the local machine; in
+      # production attach it to an internal docker network instead of
+      # publishing a port at all
+      - "127.0.0.1:2525:25"
+    healthcheck:
+      test: ["CMD", "/usr/bin/init", "--healthcheck"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+      start_period: 3s
     volumes:
       # The queue MUST persist: postfix answers 250 once a mail is
       # fsync'ed into the queue — the sender never retries after that.
