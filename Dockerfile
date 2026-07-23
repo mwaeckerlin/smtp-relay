@@ -13,6 +13,18 @@ RUN mkdir -p /tmp
 RUN chmod 1777 /tmp
 RUN postconf -e 'mynetworks = 127.0.0.1/32 192.168.0.0/16 172.16.0.0/12 10.0.0.0/8'
 RUN postconf -e 'smtp_tls_security_level = may'
+# Transport-encryption policy for the whole postfix family (inherited by
+# smtp-relay-tls, mailforward and postfix via their FROM chain). The TLS
+# 1.2 floor applies only to the MANDATORY paths (enforced/authenticated
+# TLS); the OPPORTUNISTIC paths keep every protocol except the broken
+# SSLv2/SSLv3 so a legacy peer's mail is still encrypted rather than
+# forced back to plaintext by a hard floor (RFC 7435; delivery before
+# filtering). See the README «Transport encryption».
+RUN postconf -e 'smtpd_tls_mandatory_protocols = >=TLSv1.2'
+RUN postconf -e 'smtpd_tls_protocols = !SSLv2, !SSLv3'
+RUN postconf -e 'smtp_tls_mandatory_protocols = >=TLSv1.2'
+RUN postconf -e 'smtp_tls_protocols = !SSLv2, !SSLv3'
+RUN postconf -e 'smtpd_tls_mandatory_ciphers = high'
 RUN postconf -e smtpd_banner="\$myhostname ESMTP"
 RUN postconf -e mail_spool_directory="/mail"
 RUN postconf -e mailbox_command=""

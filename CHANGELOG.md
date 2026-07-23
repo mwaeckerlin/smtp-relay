@@ -1,5 +1,14 @@
 # Changelog
 
+- 2026-07-20 **transport-encryption policy for the family**
+    - The TLS 1.2 floor now applies only to the mandatory TLS paths
+      (enforced or authenticated connections). Opportunistic inbound and
+      outbound TLS keep every protocol except the broken SSLv2/SSLv3, so
+      a legacy peer's mail is still encrypted rather than forced back to
+      plaintext by a hard floor (delivery before filtering). Inherited
+      by smtp-relay-tls, mailforward and postfix through the image
+      chain.
+
 - 2026-07-18 **security hardening**
     - Every configuration value from the environment is now validated
       before use; a malformed value (for example an embedded newline
