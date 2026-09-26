@@ -48,7 +48,7 @@ RUN rm -f /usr/libexec/postfix/postfix-script \
 # actually needs into /root/. The final scratch stage copies /root/
 # verbatim — no shell, no package manager, no busybox. musl's `ldd`
 # accepts exactly ONE file per invocation, so deps are gathered in a
-# per-file loop; /lib/ld-musl-x86_64.so.1 is the ELF interpreter and
+# per-file loop; /lib/ld-musl-<arch>.so.1 is the ELF interpreter and
 # listed explicitly.
 RUN tar cph \
         /etc/postfix /var/spool/postfix /var/lib/postfix /mail \
@@ -59,7 +59,7 @@ RUN tar cph \
         /usr/sbin/postdrop /usr/sbin/postcat /usr/sbin/sendmail \
         /usr/libexec/postfix /usr/lib/postfix \
         /usr/share/icu \
-        /usr/bin/init /lib/ld-musl-x86_64.so.1 /tmp \
+        /usr/bin/init /lib/ld-musl-*.so.1 /tmp \
         $(for f in /usr/sbin/post* /usr/sbin/sendmail \
                    /usr/libexec/postfix/* /usr/lib/postfix/*.so*; do \
               ldd "$f" 2>/dev/null | sed -n 's,.* => \([^ ]*\) .*,\1,p'; \
