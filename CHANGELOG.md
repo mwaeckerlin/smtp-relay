@@ -1,5 +1,10 @@
 # Changelog
 
+- 2026-10-22 **3.5.2**
+    - The networks allowed to relay are set with `MYNETWORKS`; unset, the built-in list of loopback and private networks stays
+    - `RELAYHOST` sends all outbound mail through one host, written as `host` or `host:port`; unset, the relay delivers directly to the recipient's MX as before
+    - A test starts the image and reads the effective postfix configuration for both variables, unset and set
+
 - 2026-09-26 **3.5.1**
     - The image builds on arm64 as well as on amd64 and is published for both under one tag, built and published automatically on every change and every week
 

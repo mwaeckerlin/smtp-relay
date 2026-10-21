@@ -17,10 +17,13 @@ Behaviour (port of the former start.sh, contract unchanged):
      MESSAGE_SIZE_LIMIT (bytes, default 100 GiB, 0 = unlimited;
      mailbox_size_limit is pinned to the same value) and
      SMTP_HARD_ERROR_LIMIT (default 20, the postfix standard).
-  3. postsuper queue sanity, then exec master in init mode (-i) as
+  3. MYNETWORKS replaces the networks allowed to relay (unset keeps the
+     list baked into main.cf); RELAYHOST host or host:port sends all
+     outbound mail through that host (relayhost=[host]:port).
+  4. postsuper queue sanity, then exec master in init mode (-i) as
      PID 1 — the same daemon `postfix start-fg` ends up running, minus
      the shell wrapper. maillog_file=/dev/stdout keeps logs on stdout.
-  4. Every env value is whitelist-validated before it is fed to
+  5. Every env value is whitelist-validated before it is fed to
      postconf — a malformed value (a newline above all: config
      injection) aborts the start with a clear `invalid <VAR>` error.
      Pinned by tests/config-validation.sh.
@@ -190,6 +193,27 @@ configure_milter(const std::string &addr) {
   std::cerr << "**** OpenDKIM milter: inet:" << addr << std::endl;
 }
 
+// The brackets suppress the MX lookup; a port stays outside them.
+std::string
+bracket_relayhost(const std::string &relayhost) {
+  const auto colon = relayhost.find(':');
+  if (colon == std::string::npos) return "[" + relayhost + "]";
+  return "[" + relayhost.substr(0, colon) + "]" + relayhost.substr(colon);
+}
+
+void
+configure_routing(const std::string &mynetworks, const std::string &relayhost) {
+  if (!mynetworks.empty()) {
+    postconf_set("mynetworks", mynetworks);
+    std::cerr << "**** mynetworks = " << mynetworks << std::endl;
+  }
+  if (!relayhost.empty()) {
+    postconf_set("relayhost", bracket_relayhost(relayhost));
+    std::cerr << "**** All outbound mail relayed through "
+              << relayhost << std::endl;
+  }
+}
+
 // Delivery-affecting limits: high, configurable, documented (README).
 void
 configure_limits() {
@@ -242,12 +266,16 @@ tcp_probe(const std::string &host, int port) {
 } // namespace
 
 int main(int argc, char *argv[]) try {
-  const std::string opendkim = env_or("OPENDKIM");
+  const std::string opendkim   = env_or("OPENDKIM");
+  const std::string mynetworks = env_or("MYNETWORKS");
+  const std::string relayhost  = env_or("RELAYHOST");
 
   // Validate every env value before it is rendered anywhere — also on
   // the --healthcheck path, so a misconfigured container reports
   // unhealthy instead of probing a listener that never came up.
   check_chars("OPENDKIM", opendkim, ".-_:");
+  check_chars("MYNETWORKS", mynetworks, " ./:,[]!-");
+  check_chars("RELAYHOST",  relayhost,  ".-_:");
   check_num("MESSAGE_SIZE_LIMIT",
             env_or("MESSAGE_SIZE_LIMIT", "107374182400"), 0, 999999999999999L);
   check_num("SMTP_HARD_ERROR_LIMIT",
@@ -260,6 +288,7 @@ int main(int argc, char *argv[]) try {
     configure_milter(with_default_port(opendkim, "10026"));
 
   disable_dnsbl();
+  configure_routing(mynetworks, relayhost);
   configure_limits();
 
   std::cerr << "**** Starting postfix master (smtp-relay)" << std::endl;

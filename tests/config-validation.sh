@@ -72,10 +72,14 @@ _reject opendkim_bad          OPENDKIM    "opendkim:10026 extra"
 _reject size_not_numeric      MESSAGE_SIZE_LIMIT    "100G"
 _reject size_injection        MESSAGE_SIZE_LIMIT    $'1000\nmynetworks = 0.0.0.0/0'
 _reject hard_error_bad        SMTP_HARD_ERROR_LIMIT "many"
+_reject mynetworks_injection  MYNETWORKS  $'10.0.0.0/8\nsmtpd_tls_auth_only = no'
+_reject relayhost_bad         RELAYHOST   $'relay.example.com\nmynetworks = 0.0.0.0/0'
 
 _accept defaults
 _accept explicit_values \
     -e OPENDKIM=opendkim:10026 \
+    -e MYNETWORKS='127.0.0.0/8, [::1]/128' \
+    -e RELAYHOST=relay.example.com:587 \
     -e MESSAGE_SIZE_LIMIT=107374182400 \
     -e SMTP_HARD_ERROR_LIMIT=20
 

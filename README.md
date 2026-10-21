@@ -1,7 +1,6 @@
 # Simple Postfix SMTP Relay
 
-**Warning:** _Open relay!_
-For internal use inside your own services, do not expose to public!
+**Warning:** _Open relay!_ For internal use inside your own services, do not expose to public!
 
 Docker image for unprotected open postfix SMTP relay server.
 
@@ -11,59 +10,40 @@ If you need `TLS`, just use [mwaeckerlin/smtp-relay-tls](https://hub.docker.com/
 
 ## Headless image
 
-The image is headless: a small compiled `init` binary configures
-postfix from the environment and execs the postfix `master` daemon in
-container mode — there is no shell, no busybox and no package manager
-in the shipped image. `init --healthcheck` TCP-probes the SMTP listener
-on 127.0.0.1:25 and can be wired as a Docker healthcheck:
+The image is headless: a small compiled `init` binary configures postfix from the environment and execs the postfix `master` daemon in container mode — there is no shell, no busybox and no package manager in the shipped image. `init --healthcheck` TCP-probes the SMTP listener on 127.0.0.1:25 and can be wired as a Docker healthcheck:
 
 ```yaml
 healthcheck:
   test: ["CMD", "/usr/bin/init", "--healthcheck"]
 ```
 
-Trade-off: the container starts as root — the postfix master needs it
-to bind port 25 and manage the mail queue — and every postfix service
-then drops privileges to the unprivileged `postfix` user per master.cf.
+Trade-off: the container starts as root — the postfix master needs it to bind port 25 and manage the mail queue — and every postfix service then drops privileges to the unprivileged `postfix` user per master.cf.
 
 ## Mail queue persistence
 
-Postfix answers `250 Ok` as soon as a mail is safely written (fsync)
-into its queue — from that moment the server owns delivery and the
-sender never retries. A deferred mail (target greylisting, target
-briefly down) can sit in the queue for hours or days. **Map
-`/var/spool/postfix` to a named volume** (see `docker-compose.yml`),
-otherwise every container recreate or image update silently destroys
-accepted-but-undelivered mail.
+Postfix answers `250 Ok` as soon as a mail is safely written (fsync) into its queue — from that moment the server owns delivery and the sender never retries. A deferred mail (target greylisting, target briefly down) can sit in the queue for hours or days. **Map `/var/spool/postfix` to a named volume** (see `docker-compose.yml`), otherwise every container recreate or image update silently destroys accepted-but-undelivered mail.
+
+## Relay networks and upstream relay
+
+- **`MYNETWORKS`** (default `127.0.0.1/32 192.168.0.0/16 172.16.0.0/12 10.0.0.0/8`): the client networks allowed to relay through this server, in postfix `mynetworks` syntax. Narrow it to the networks of the services that really send mail.
+- **`RELAYHOST`** (default empty: deliver directly to the recipient's MX): `host` or `host:port` of an upstream SMTP server that takes all outbound mail, written to postfix as `relayhost = [host]:port` (no MX lookup).
+
+Pinned by `tests/env-config.sh` (`npm test`), which reads the effective `postconf` value with and without each variable.
 
 ## DNS blocklists
 
-The smtpd restrictions include DNSBL/RHSBL lookups (manitu, spamhaus).
-Set **`DISABLE_DNSBL`** to any non-empty value to strip them — for
-test or offline stacks whose resolver cannot answer the blocklist
-zones (each lookup would stall the SMTP dialogue until the resolver
-timeout). Trade-off: without the blocklists, known-bad senders are no
-longer rejected at connect time; leave it unset in production.
+The smtpd restrictions include DNSBL/RHSBL lookups (manitu, spamhaus). Set **`DISABLE_DNSBL`** to any non-empty value to strip them — for test or offline stacks whose resolver cannot answer the blocklist zones (each lookup would stall the SMTP dialogue until the resolver timeout). Trade-off: without the blocklists, known-bad senders are no longer rejected at connect time; leave it unset in production.
 
 ## Delivery-affecting limits
 
-Both limits are deliberately high by default and configurable — a
-legitimate mail must never bounce because of an artificial default:
+Both limits are deliberately high by default and configurable — a legitimate mail must never bounce because of an artificial default:
 
-- **`MESSAGE_SIZE_LIMIT`** (bytes, default `107374182400` = 100 GiB,
-  `0` = unlimited): maximum accepted message size;
-  `mailbox_size_limit` is pinned to the same value.
-- **`SMTP_HARD_ERROR_LIMIT`** (default `20`, the postfix standard):
-  hard SMTP protocol errors per session before the connection is
-  dropped.
+- **`MESSAGE_SIZE_LIMIT`** (bytes, default `107374182400` = 100 GiB, `0` = unlimited): maximum accepted message size; `mailbox_size_limit` is pinned to the same value.
+- **`SMTP_HARD_ERROR_LIMIT`** (default `20`, the postfix standard): hard SMTP protocol errors per session before the connection is dropped.
 
 ## Input validation
 
-Every environment value is whitelist-validated at start-up before it
-is fed to `postconf` — a malformed value (embedded newline, stray
-metacharacters, out-of-range number) aborts the start with a clear
-`invalid <VAR>` error instead of rendering a broken or unsafe
-configuration. Pinned by `tests/config-validation.sh` (`npm test`).
+Every environment value is whitelist-validated at start-up before it is fed to `postconf` — a malformed value (embedded newline, stray metacharacters, out-of-range number) aborts the start with a clear `invalid <VAR>` error instead of rendering a broken or unsafe configuration. Pinned by `tests/config-validation.sh` (`npm test`).
 
 See also:
 
@@ -76,7 +56,7 @@ See also:
 
 ### SPF (Sender Policy Framework)
 
-SPF is DNS-only — no server-side configuration required. Add a TXT record to your domain:
+SPF is DNS-only — no server-side configuration required. Add a TXT record to your domain:
 
 ```
 Name:  example.com

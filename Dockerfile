@@ -69,6 +69,8 @@ RUN tar cph \
 FROM mwaeckerlin/scratch
 ENV CONTAINERNAME="smtp-relay" \
     OPENDKIM="" \
+    MYNETWORKS="" \
+    RELAYHOST="" \
     DISABLE_DNSBL="" \
     MESSAGE_SIZE_LIMIT="107374182400" \
     SMTP_HARD_ERROR_LIMIT="20"
