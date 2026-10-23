@@ -1,5 +1,8 @@
 # Changelog
 
+- 2026-10-23 **3.5.4**
+    - The weekly run also rebuilds the version lines 1 and 2, published as `mwaeckerlin/smtp-relay:1` and `:2` from the branches `1` and `2`, so they get the security fixes of their base images like the line 3
+
 - 2026-10-23 **3.5.3**
     - The version line 3 is published as `mwaeckerlin/smtp-relay:3` from the branch `3`, on every push to it and every week from the run on master, so it gets the security fixes of its base images
 
