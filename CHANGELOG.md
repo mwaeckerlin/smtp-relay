@@ -1,5 +1,8 @@
 # Changelog
 
+- 2026-10-23 **3.5.3**
+    - The version line 3 is published as `mwaeckerlin/smtp-relay:3` from the branch `3`, on every push to it and every week from the run on master, so it gets the security fixes of its base images
+
 - 2026-10-22 **3.5.2**
     - The networks allowed to relay are set with `MYNETWORKS`; unset, the built-in list of loopback and private networks stays
     - `RELAYHOST` sends all outbound mail through one host, written as `host` or `host:port`; unset, the relay delivers directly to the recipient's MX as before
