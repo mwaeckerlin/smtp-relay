@@ -206,8 +206,10 @@ bracket_relayhost(const std::string &relayhost) {
 // fills with the first twelve hex digits of the container id. A name
 // like `d308e74f098d.localdomain` resolves nowhere, so a receiver sees
 // mail from an address announcing a name that does not exist. Measured
-// on 2026-10-27: Spamhaus listed the sending address on XBL and CSS for
-// exactly that, and one listing hits every service behind it.
+// on 2026-10-27: the Spamhaus entry for the sending address carried
+// exactly that name, and one listing hits every service behind the
+// address. Spamhaus names the dynamic address pool as the reason for
+// the listing itself, so the name is the half this image can fix.
 //
 // MAILHOST names the host, as in the sibling mailforward. Unset, the
 // start says what it costs instead of greeting silently with an id.

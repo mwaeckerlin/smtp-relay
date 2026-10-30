@@ -1,5 +1,8 @@
 # Changelog
 
+- 2026-10-30 **3.5.6**
+    - The README and the start-up code say what was measured about the Spamhaus listing of 2026-10-27: the entry carried the container name, and Spamhaus names the address pool as the reason for the listing itself. On the removal, 2026-10-30, it answered that the address «is dynamic or CGNAT, and has a extremely poor reputation», blames the provider's open port 25 on that pool and expects the listing to return. A name of your own is one of two conditions for direct delivery and the only one this image can meet; the other is an address whose reputation you own.
+
 - 2026-10-30 **3.5.5**
     - The name postfix announces is configurable and reported. Without `MAILHOST` or a `hostname:` in the compose file, postfix took the container hostname, which docker fills with the first twelve hex digits of the container id: every receiving server was greeted with a name that resolves nowhere. On 2026-10-27 that put a sending address on the Spamhaus lists XBL and CSS, with the entry `212.51.159.193 2026-10-27 15:15:00 d308e74f098d.localdomain`, and one listing hits every service behind that address. `MAILHOST` now writes `myhostname`, a start without any name says in the log what it is about to announce and what it costs, and the README carries the three values that have to agree with the commands to read them.
     - `docker-compose.example.yml` shows a complete stack: Nextcloud and WordPress hand their mail to this relay, and the relay delivers to the recipient's mail server itself.
