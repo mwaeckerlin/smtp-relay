@@ -1,0 +1,71 @@
+# Nextcloud and WordPress sending mail through this relay, which
+# delivers to the recipient's mail server itself.
+#
+# Three names have to agree, or receivers refuse the mail and
+# blocklists record the address it came from:
+#
+#   hostname: below            the name postfix announces
+#   dig +short mail.example.com        gives the address the mail leaves from
+#   dig +short -x <that address>       gives that same name back
+#
+# Read the third one before deploying. The address mail leaves from is
+# the public address of the host, or of the NAT router in front of it;
+# the PTR record belongs to whoever owns that address, usually the
+# provider. Whatever name it carries is the name that goes here.
+#
+# Without SPF and DKIM for every sending domain the mail is refused from
+# a correct address as well: Google answers `5.7.26 unauthenticated
+# mail`. The README of this image carries the records.
+
+services:
+
+  smtp:
+    image: mwaeckerlin/smtp-relay
+    hostname: mail.example.com
+    environment:
+      # The same name again, so the configuration says it rather than
+      # depending on the container hostname.
+      MAILHOST: mail.example.com
+      # Only the services of this stack may relay. The default covers
+      # every private network; narrow it to what really sends.
+      MYNETWORKS: 172.16.0.0/12
+    volumes:
+      # Postfix answers 250 as soon as the mail is in its queue, and
+      # from then on it owns delivery. Without this volume a container
+      # recreate destroys accepted mail.
+      - smtp-spool:/var/spool/postfix
+    healthcheck:
+      test: ["CMD", "/usr/bin/init", "--healthcheck"]
+    networks: [mail]
+
+  nextcloud:
+    image: mwaeckerlin/nextcloud
+    environment:
+      SMTP_HOST: smtp
+      SMTP_PORT: "25"
+      # The address Nextcloud sends from. Its domain needs the SPF
+      # record, and DKIM where it is used.
+      MAIL_FROM_ADDRESS: nextcloud
+      MAIL_DOMAIN: example.com
+    depends_on:
+      smtp: { condition: service_healthy }
+    networks: [mail, web]
+
+  wordpress:
+    image: mwaeckerlin/wordpress
+    environment:
+      SMTP_HOST: smtp
+      SMTP_PORT: "25"
+      SMTP_FROM: wordpress@example.com
+    depends_on:
+      smtp: { condition: service_healthy }
+    networks: [mail, web]
+
+networks:
+  # The relay reaches the internet over this network; the services talk
+  # to the relay over it as well.
+  mail:
+  web:
+
+volumes:
+  smtp-spool:

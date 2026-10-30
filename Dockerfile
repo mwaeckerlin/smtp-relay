@@ -69,6 +69,7 @@ RUN tar cph \
 FROM mwaeckerlin/scratch
 ENV CONTAINERNAME="smtp-relay" \
     OPENDKIM="" \
+    MAILHOST="" \
     MYNETWORKS="" \
     RELAYHOST="" \
     DISABLE_DNSBL="" \

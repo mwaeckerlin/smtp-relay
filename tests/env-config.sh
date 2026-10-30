@@ -83,6 +83,48 @@ if _start relayhost_without_port -e RELAYHOST=relay.example.com; then
     _expect relayhost_without_port relayhost "[relay.example.com]"
 fi
 
+# The name postfix announces to every receiving server. Without one it
+# takes the container hostname, which docker fills with the container
+# id; that name resolves nowhere, receivers refuse the mail and
+# blocklists record the sending address.
+_expect_log() {
+    local name="$1" want="$2" got
+    got=$(docker logs "${CID}" 2>&1)
+    if [[ "${got}" == *"${want}"* ]]; then
+        _pass "${name}"
+    else
+        _fail "${name}" "the log has no '${want}': ${got}"
+    fi
+}
+
+_expect_not_in_log() {
+    local name="$1" unwanted="$2" got
+    got=$(docker logs "${CID}" 2>&1)
+    if [[ "${got}" == *"${unwanted}"* ]]; then
+        _fail "${name}" "the log carries '${unwanted}'"
+    else
+        _pass "${name}"
+    fi
+}
+
+if _start mailhost -e MAILHOST=mail.example.com; then
+    _expect mailhost_myhostname myhostname "mail.example.com"
+    _expect_not_in_log mailhost_no_warning "WARNING! myhostname"
+fi
+
+# `hostname:` in the compose file is the other correct way, and it must
+# not produce a warning either.
+if _start container_hostname --hostname mail.example.com; then
+    _expect container_hostname_myhostname myhostname "mail.example.com"
+    _expect_not_in_log container_hostname_no_warning "WARNING! myhostname"
+fi
+
+# Neither set: docker's own default, and the start says what it costs.
+if _start unnamed; then
+    _expect_log unnamed_warns "WARNING! myhostname"
+    _expect_log unnamed_names_the_cost "blocklists record the sending address"
+fi
+
 echo ""
 echo "==> Environment contract results: ${PASS} passed, ${FAIL} failed"
 if [[ ${FAIL} -gt 0 ]]; then
